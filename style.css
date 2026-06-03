@@ -110,6 +110,11 @@ body::before {
 #view-login { align-items: center; justify-content: center; padding: 2rem 1rem; }
 .login-wrapper { width: 100%; max-width: 460px; position: relative; z-index: 2; }
 .login-card { padding: 2.5rem 2rem; }
+.wave-canvas {
+  position: fixed; inset: 0;
+  width: 100vw; height: 100vh;
+  z-index: 0; pointer-events: none; opacity: 1;
+}
 .college-badge {
   display: flex; align-items: center; gap: .5rem; justify-content: center;
   background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.25);
