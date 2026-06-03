@@ -444,11 +444,6 @@ function renderQuestion() {
     grid.appendChild(btn);
   });
 
-  // Next button
-  const nextBtn = document.getElementById('next-btn');
-  nextBtn.disabled = true;
-  document.getElementById('next-btn-label').textContent = 'Select an answer';
-
   // Footer info
   document.getElementById('answered-info').style.display = 'none';
   document.getElementById('student-waiting-host').style.display = 'none';
@@ -700,7 +695,7 @@ function renderPodium(top) {
     { rank: 3, data: top[2] }
   ].filter(item => item.data);
 
-  const medals = { 1: '🥇', 2: '🥈', 3: '🥉' };
+  const medals = { 1: '1', 2: '2', 3: '3' };
 
   wrap.innerHTML = podiumData.map(item => {
     const r = item.data;
