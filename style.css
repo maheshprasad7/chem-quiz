@@ -108,7 +108,7 @@ body::before {
 }
 
 /* ===== LOGIN / ADMIN / WAITING VIEWS ===== */
-#view-login, #view-admin, #view-waiting, #view-result { 
+#view-login, #view-admin, #view-waiting, #view-result, #view-leaderboard { 
   align-items: center; justify-content: center; padding: 2rem 1rem; 
 }
 .login-wrapper { width: 100%; max-width: 460px; position: relative; z-index: 2; }
