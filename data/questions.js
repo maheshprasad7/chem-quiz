@@ -1,80 +1,78 @@
 // ============================================================
 // CHEMISTRY QUIZ — QUESTIONS DATA
-// Replace these placeholder questions with your actual questions.
-// answer: index of correct option (0=A, 1=B, 2=C, 3=D)
 // ============================================================
 
 const QUESTIONS = [
   {
     id: 1,
-    question: "What is the atomic number of Carbon?",
-    options: ["4", "6", "8", "12"],
+    question: "Why are hydrogels preferred over traditional metal electrodes in BCI applications?",
+    options: ["They are cheaper to manufacture", "They are softer and more compatible with brain tissue", "They generate stronger electrical signals", "They do not require electricity"],
     answer: 1
   },
   {
     id: 2,
-    question: "Which gas is produced when dilute H₂SO₄ reacts with zinc?",
-    options: ["Oxygen", "Carbon dioxide", "Hydrogen", "Nitrogen"],
+    question: "What is the primary role of calcium ions during alginate hydrogel synthesis?",
+    options: ["Increase conductivity", "Change color of the hydrogel", "Cross-link alginate chains to form a gel network", "Increase temperature"],
     answer: 2
   },
   {
     id: 3,
-    question: "The pH of a neutral solution at 25°C is:",
-    options: ["0", "7", "14", "10"],
+    question: "If a hydrogel closely matches the softness of brain tissue, what benefit does it provide?",
+    options: ["Faster internet speed", "Reduced tissue damage and inflammation", "Increased weight of the implant", "Higher temperature resistance"],
     answer: 1
   },
   {
     id: 4,
-    question: "What is the chemical formula of common salt?",
-    options: ["KCl", "NaOH", "NaCl", "CaCl₂"],
-    answer: 2
+    question: "Why is pure alginate hydrogel often modified before being used in BCI devices?",
+    options: ["It dissolves instantly", "It lacks sufficient electrical conductivity", "It is toxic to neurons", "It cannot form a gel"],
+    answer: 1
   },
   {
     id: 5,
-    question: "Which element is present in all organic compounds?",
-    options: ["Hydrogen", "Oxygen", "Carbon", "Nitrogen"],
-    answer: 2
+    question: "What is the main challenge when using rigid electrodes inside the brain?",
+    options: ["Excessive flexibility", "Mechanical mismatch with soft brain tissue", "Low manufacturing cost", "High water content"],
+    answer: 1
   },
   {
     id: 6,
-    question: "The process of converting glucose to ethanol by yeast is called:",
-    options: ["Oxidation", "Fermentation", "Hydrolysis", "Esterification"],
-    answer: 1
+    question: "How does increasing calcium ion concentration generally affect alginate hydrogel?",
+    options: ["Makes it weaker", "Makes it softer and less stable", "Increases cross-linking and stiffness", "Stops gel formation"],
+    answer: 2
   },
   {
     id: 7,
-    question: "Avogadro's number is approximately:",
-    options: ["6.022 × 10²³", "6.022 × 10²⁰", "3.011 × 10²³", "1.602 × 10¹⁹"],
-    answer: 0
-  },
-  {
-    id: 8,
-    question: "Which of the following is a noble gas?",
-    options: ["Nitrogen", "Chlorine", "Argon", "Fluorine"],
-    answer: 2
-  },
-  {
-    id: 9,
-    question: "The IUPAC name of CH₃CHO is:",
-    options: ["Methanol", "Ethanal", "Ethanol", "Methanal"],
+    question: "Why is biocompatibility important for materials used in BCI systems?",
+    options: ["It improves Wi-Fi connectivity", "It reduces adverse reactions inside the body", "It increases battery life", "It lowers electrical resistance"],
     answer: 1
   },
   {
+    id: 8,
+    question: "Which property of alginate hydrogel helps mimic the natural environment of brain tissue?",
+    options: ["High metal content", "High water content", "High density", "High melting point"],
+    answer: 1
+  },
+  {
+    id: 9,
+    question: "What is the main purpose of adding graphene or conductive polymers to alginate hydrogel?",
+    options: ["Improve electrical signal transmission", "Change its color", "Reduce water content", "Increase biodegradation speed"],
+    answer: 0
+  },
+  {
     id: 10,
-    question: "Which type of bond is present in NaCl?",
-    options: ["Covalent bond", "Metallic bond", "Ionic bond", "Hydrogen bond"],
-    answer: 2
+    question: "In a Brain-Computer Interface, what is the role of the hydrogel layer around an electrode?",
+    options: ["Decorate the implant", "Act as a soft interface between brain tissue and electronics", "Produce neural signals", "Store electrical energy"],
+    answer: 1
   },
   {
     id: 11,
-    question: "The oxidation state of oxygen in H₂O₂ is:",
-    options: ["-2", "-1", "+1", "+2"],
+    question: "Which application best demonstrates the use of alginate hydrogel in neural engineering?",
+    options: ["Construction materials", "Neural tissue scaffolds supporting neuron growth", "Vehicle manufacturing", "Solar panel production"],
     answer: 1
   },
   {
     id: 12,
-    question: "Which law states that gases at the same temperature and pressure contain equal numbers of molecules?",
-    options: ["Boyle's Law", "Charles' Law", "Avogadro's Law", "Dalton's Law"],
-    answer: 2
+    question: "What is the biggest advantage of combining alginate hydrogel with conductive materials for BCI applications?",
+    options: ["Increased transparency only", "Better balance of biocompatibility and electrical performance", "Complete elimination of water content", "Reduced flexibility"],
+    answer: 1
   }
 ];

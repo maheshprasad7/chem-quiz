@@ -9,13 +9,14 @@
 // ============================================================
 
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyCM7k32MTH8RJhSaCDQ5mKw2WuoQiPVEqA",
+  authDomain: "quiz-6f5a9.firebaseapp.com",
+  projectId: "quiz-6f5a9",
+  storageBucket: "quiz-6f5a9.firebasestorage.app",
+  messagingSenderId: "405147202333",
+  appId: "1:405147202333:web:d79fbfd289d4ed821727f4",
+  measurementId: "G-WTYD0YWNRM"
 };
 
 // Set to true once you've filled in the config above
-const FIREBASE_CONFIGURED = false;
+const FIREBASE_CONFIGURED = true;

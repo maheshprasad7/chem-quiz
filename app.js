@@ -10,6 +10,7 @@ const SCORE_CIRC = 326.7;   // 2 * Math.PI * 52
 // ── State ──────────────────────────────────────────────────
 let db = null;
 let lbUnsubscribe = null;
+let waitingUnsubscribe = null;
 let state = {
   usn: '', name: '',
   currentQ: 0,
@@ -18,7 +19,9 @@ let state = {
   timerVal: TIMER_SECONDS,
   timerInterval: null,
   startTime: null,
-  currentUSN_score: null
+  currentUSN_score: null,
+  isGlobalStarted: false,
+  isAdmin: false
 };
 
 // ── Init ───────────────────────────────────────────────────
@@ -63,10 +66,10 @@ function initWaveAnimation() {
       const r = 79 + intensity * 100;
       const g = 70 + intensity * 130;
       const b = 229;
-      ctx.lineWidth = 1 + i * 0.3;
-      ctx.strokeStyle = `rgba(${r},${g},${b},0.6)`;
-      ctx.shadowColor = `rgba(${r},${g},${b},0.5)`;
-      ctx.shadowBlur = 5;
+      ctx.lineWidth = 2 + i * 0.4;
+      ctx.strokeStyle = `rgba(${r},${g},${b},0.85)`;
+      ctx.shadowColor = `rgba(${r},${g},${b},0.6)`;
+      ctx.shadowBlur = 8;
       ctx.stroke();
       ctx.shadowBlur = 0;
     });
@@ -98,12 +101,50 @@ window.addEventListener('DOMContentLoaded', () => {
     try {
       firebase.initializeApp(firebaseConfig);
       db = firebase.firestore();
+      listenToGlobalQuizState();
     } catch (err) {
       console.error('Firebase init error:', err);
       showToast('Firebase error — check console');
     }
   }
 });
+
+function listenToGlobalQuizState() {
+  if (!db) return;
+  db.collection('config').doc('quiz_state').onSnapshot(snap => {
+    if (snap.exists) {
+      const data = snap.data();
+      const wasWaiting = !state.isGlobalStarted;
+      state.isGlobalStarted = data.status === 'started';
+      
+      // Update admin UI if admin
+      if (state.isAdmin) {
+        const adminBtn = document.getElementById('admin-start-btn');
+        const adminStatus = document.getElementById('admin-status-display');
+        if (state.isGlobalStarted) {
+          adminStatus.innerHTML = `Current Status: <strong style="color:#10b981">RUNNING</strong>`;
+          adminBtn.disabled = true;
+          adminBtn.innerHTML = '✅ QUIZ IS RUNNING';
+        } else {
+          adminStatus.innerHTML = `Current Status: <strong style="color:var(--gold)">Waiting</strong>`;
+          adminBtn.disabled = false;
+          adminBtn.innerHTML = '🚀 START QUIZ FOR EVERYONE';
+        }
+      }
+
+      // If user is in waiting room and it starts
+      if (!state.isAdmin && state.usn && wasWaiting && state.isGlobalStarted) {
+        // Double check they are in the waiting view
+        if (document.getElementById('view-waiting').classList.contains('active')) {
+          startFreshQuiz();
+        }
+      }
+    } else {
+      // Create it if it doesn't exist
+      db.collection('config').doc('quiz_state').set({ status: 'waiting' });
+    }
+  });
+}
 
 // ── View routing ───────────────────────────────────────────
 function showView(name) {
@@ -121,11 +162,33 @@ async function handleLogin() {
   if (!usn) {
     showError(errEl, '⚠️ Please enter your USN.'); return;
   }
+
+  // Admin Check
+  if (usn === '4EV25CS101') {
+    state.isAdmin = true;
+    state.usn = usn;
+    showView('admin');
+    listenToWaitingRoom();
+    return;
+  }
+
+  // Latecomers check
+  if (state.isGlobalStarted) {
+    showError(errEl, '⛔ The quiz has already started. Latecomers are not allowed.');
+    return;
+  }
+
   btn.disabled = true;
   btn.querySelector('span').textContent = 'Checking…';
 
   // Name lookup
   const name = getStudentName(usn);
+  if (!name) {
+    showError(errEl, '⚠️ Invalid USN. Please check and try again.');
+    btn.disabled = false;
+    btn.querySelector('span').textContent = 'Start Quiz';
+    return;
+  }
 
   // Check Firestore for existing completed attempt
   if (db) {
@@ -162,8 +225,44 @@ async function handleLogin() {
 
   btn.disabled = false; btn.querySelector('span').textContent = 'Start Quiz';
   state.usn = usn;
-  state.name = name || usn;
-  startFreshQuiz();
+  state.name = name;
+  
+  // Send to waiting room
+  document.getElementById('waiting-name').textContent = name;
+  document.getElementById('waiting-avatar').textContent = name.charAt(0);
+  
+  // Register in waiting room database
+  if (db) {
+    try {
+      db.collection('waiting_room').doc(usn).set({
+        name: name,
+        joinedAt: new Date().toISOString()
+      });
+    } catch(e) { console.warn(e); }
+  }
+  
+  showView('waiting');
+}
+
+// ── Admin Functions ────────────────────────────────────────
+function listenToWaitingRoom() {
+  if (!db) return;
+  if (waitingUnsubscribe) waitingUnsubscribe();
+  waitingUnsubscribe = db.collection('waiting_room').onSnapshot(snap => {
+    document.getElementById('live-waiting-count').textContent = snap.size;
+  });
+}
+
+function startGlobalQuiz() {
+  if (db) db.collection('config').doc('quiz_state').set({ status: 'started' });
+}
+
+function resetGlobalQuiz() {
+  if (db) {
+    db.collection('config').doc('quiz_state').set({ status: 'waiting' });
+    // Optional: Clear waiting room count when resetting
+    // But since it's a simple app, we'll let it be.
+  }
 }
 
 function showError(el, msg) { el.textContent = msg; el.classList.remove('hidden'); }
