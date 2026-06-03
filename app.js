@@ -114,34 +114,44 @@ function listenToGlobalQuizState() {
   db.collection('config').doc('quiz_state').onSnapshot(snap => {
     if (snap.exists) {
       const data = snap.data();
-      const wasWaiting = !state.isGlobalStarted;
-      state.isGlobalStarted = data.status === 'started';
+      state.isGlobalStarted = data.status === 'in_progress' || data.status === 'started';
       
-      // Update admin UI if admin
       if (state.isAdmin) {
-        const adminBtn = document.getElementById('admin-start-btn');
-        const adminStatus = document.getElementById('admin-status-display');
-        if (state.isGlobalStarted) {
-          adminStatus.innerHTML = `Current Status: <strong style="color:#10b981">RUNNING</strong>`;
-          adminBtn.disabled = true;
-          adminBtn.innerHTML = '✅ QUIZ IS RUNNING';
+        if (data.status === 'in_progress') {
+          if (!document.getElementById('view-admin-live').classList.contains('active')) {
+            showView('admin-live');
+          }
+          state.currentQ = data.currentQuestion || 0;
+          renderAdminLiveQuestion();
+        } else if (data.status === 'ended') {
+          showLeaderboard();
         } else {
-          adminStatus.innerHTML = `Current Status: <strong style="color:var(--gold)">Waiting</strong>`;
-          adminBtn.disabled = false;
-          adminBtn.innerHTML = '🚀 START QUIZ FOR EVERYONE';
+          const adminBtn = document.getElementById('admin-start-btn');
+          const adminStatus = document.getElementById('admin-status-display');
+          if (adminBtn && adminStatus) {
+            adminStatus.innerHTML = `Current Status: <strong style="color:var(--gold)">Waiting</strong>`;
+            adminBtn.disabled = false;
+            adminBtn.innerHTML = '🚀 START QUIZ FOR EVERYONE';
+          }
         }
-      }
-
-      // If user is in waiting room and it starts
-      if (!state.isAdmin && state.usn && wasWaiting && state.isGlobalStarted) {
-        // Double check they are in the waiting view
-        if (document.getElementById('view-waiting').classList.contains('active')) {
-          startFreshQuiz();
+      } else {
+        // Student Side
+        if (data.status === 'in_progress') {
+          if (document.getElementById('view-waiting').classList.contains('active')) {
+            startFreshQuiz();
+          }
+          if (document.getElementById('view-quiz').classList.contains('active') && state.currentQ !== data.currentQuestion) {
+            state.currentQ = data.currentQuestion;
+            renderQuestion();
+          }
+        } else if (data.status === 'ended') {
+          if (document.getElementById('view-quiz').classList.contains('active')) {
+            submitQuiz();
+          }
         }
       }
     } else {
-      // Create it if it doesn't exist
-      db.collection('config').doc('quiz_state').set({ status: 'waiting' });
+      if (state.isAdmin) db.collection('config').doc('quiz_state').set({ status: 'waiting' });
     }
   });
 }
@@ -245,16 +255,100 @@ async function handleLogin() {
 }
 
 // ── Admin Functions ────────────────────────────────────────
+let liveAnswersUnsubscribe = null;
+
+let waitingInitialLoad = true;
 function listenToWaitingRoom() {
   if (!db) return;
   if (waitingUnsubscribe) waitingUnsubscribe();
   waitingUnsubscribe = db.collection('waiting_room').onSnapshot(snap => {
-    document.getElementById('live-waiting-count').textContent = snap.size;
+    const countEl = document.getElementById('live-waiting-count');
+    if (countEl) countEl.textContent = snap.size;
+
+    if (!waitingInitialLoad) {
+      snap.docChanges().forEach(change => {
+        if (change.type === 'added') {
+          showToast(`👋 ${change.doc.data().name} joined!`, 3000);
+        }
+      });
+    }
+    waitingInitialLoad = false;
   });
 }
 
+function renderAdminLiveQuestion() {
+  if (!db) return;
+  const q = QUESTIONS[state.currentQ];
+  document.getElementById('admin-q-badge').textContent = `Question ${state.currentQ + 1} / ${QUESTIONS.length}`;
+  document.getElementById('admin-q-text').textContent = q.question;
+  
+  const labels = ['A', 'B', 'C', 'D'];
+  const grid = document.getElementById('admin-options-grid');
+  grid.innerHTML = q.options.map((opt, i) => `
+    <div class="option-btn" style="position:relative; overflow:hidden; border-color: ${i === q.answer ? '#10b981' : 'var(--glass-border)'}; cursor:default;">
+      <div id="admin-bar-${i}" style="position:absolute; left:0; top:0; bottom:0; width:0%; background: ${i === q.answer ? 'rgba(16,185,129,0.3)' : 'rgba(255,255,255,0.1)'}; transition: width 0.3s; z-index:0;"></div>
+      <div style="position:relative; z-index:1; display:flex; justify-content:space-between; width:100%;">
+        <div><span class="option-label">${labels[i]}</span><span>${opt}</span></div>
+        <div style="font-weight:bold" id="admin-count-${i}">0</div>
+      </div>
+    </div>
+  `).join('');
+  
+  // Timer sync
+  document.getElementById('admin-timer').textContent = '10';
+  document.getElementById('admin-next-btn').disabled = true;
+  document.getElementById('admin-next-btn').innerHTML = 'Wait for Timer...';
+  
+  // Start countdown on admin side
+  let adminTimer = 10;
+  clearInterval(state.timerInterval);
+  state.timerInterval = setInterval(() => {
+    adminTimer--;
+    if (adminTimer >= 0) document.getElementById('admin-timer').textContent = adminTimer;
+    if (adminTimer <= 0) {
+      clearInterval(state.timerInterval);
+      document.getElementById('admin-next-btn').disabled = false;
+      document.getElementById('admin-next-btn').innerHTML = state.currentQ >= QUESTIONS.length - 1 ? 'End Quiz & Show Leaderboard' : 'Next Question ➡️';
+    }
+  }, 1000);
+
+  // Listen to live answers for this question
+  if (liveAnswersUnsubscribe) liveAnswersUnsubscribe();
+  liveAnswersUnsubscribe = db.collection('live_answers').onSnapshot(snap => {
+    let total = 0;
+    let counts = [0, 0, 0, 0];
+    snap.docs.forEach(doc => {
+      const d = doc.data();
+      const ans = d['q' + state.currentQ];
+      if (ans !== undefined && ans !== null) {
+        total++;
+        counts[ans]++;
+      }
+    });
+    
+    document.getElementById('admin-answered-count').textContent = total;
+    const waitingSize = document.getElementById('live-waiting-count') ? document.getElementById('live-waiting-count').textContent : total;
+    document.getElementById('admin-total-count').textContent = waitingSize; // approximate
+
+    counts.forEach((c, i) => {
+      document.getElementById(`admin-count-${i}`).textContent = c;
+      const pct = total === 0 ? 0 : (c / total) * 100;
+      document.getElementById(`admin-bar-${i}`).style.width = pct + '%';
+    });
+  });
+}
+
+function adminNextQuestion() {
+  const nextQ = state.currentQ + 1;
+  if (nextQ >= QUESTIONS.length) {
+    db.collection('config').doc('quiz_state').update({ status: 'ended' });
+  } else {
+    db.collection('config').doc('quiz_state').update({ currentQuestion: nextQ });
+  }
+}
+
 function startGlobalQuiz() {
-  if (db) db.collection('config').doc('quiz_state').set({ status: 'started' });
+  if (db) db.collection('config').doc('quiz_state').set({ status: 'in_progress', currentQuestion: 0 });
 }
 
 function resetGlobalQuiz() {
@@ -356,8 +450,8 @@ function renderQuestion() {
   document.getElementById('next-btn-label').textContent = 'Select an answer';
 
   // Footer info
-  const answered = state.answers.filter(a => a !== null).length;
-  document.getElementById('answered-info').textContent = `${answered} of ${total} answered`;
+  document.getElementById('answered-info').style.display = 'none';
+  document.getElementById('student-waiting-host').style.display = 'none';
 
   // Animate card
   const card = document.getElementById('question-card');
@@ -373,32 +467,28 @@ function renderQuestion() {
 
 function selectAnswer(optIdx) {
   if (state.answers[state.currentQ] !== null) return; // already answered
-  clearInterval(state.timerInterval);
+  if (state.timerVal <= 0) return; // time is up
 
   const spent = TIMER_SECONDS - state.timerVal;
   state.timeSpent[state.currentQ] = spent;
   state.answers[state.currentQ] = optIdx;
 
   // Highlight selected
-  document.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+  document.querySelectorAll('.option-btn').forEach(b => {
+    if (b.id !== `opt-${optIdx}`) b.style.opacity = '0.5';
+  });
   document.getElementById(`opt-${optIdx}`).classList.add('selected');
 
-  // Enable next
-  const nextBtn = document.getElementById('next-btn');
-  nextBtn.disabled = false;
-  const isLast = state.currentQ >= QUESTIONS.length - 1;
-  document.getElementById('next-btn-label').textContent = isLast ? 'Submit Quiz' : 'Next Question';
-
-  saveProgress();
-}
-
-function handleNext() {
-  if (state.currentQ >= QUESTIONS.length - 1) {
-    submitQuiz();
-  } else {
-    state.currentQ++;
-    renderQuestion();
+  // Write to live_answers immediately
+  if (db) {
+    try {
+      db.collection('live_answers').doc(state.usn).set({
+        ['q' + state.currentQ]: optIdx
+      }, { merge: true });
+    } catch(e) {}
   }
+  
+  saveProgress();
 }
 
 // ── Timer ──────────────────────────────────────────────────
@@ -415,25 +505,39 @@ function startTimer() {
     if (state.timerVal <= 3) wrap.classList.add('timer-low');
     if (state.timerVal <= 0) {
       clearInterval(state.timerInterval);
-      // Time out — auto advance with no answer
       if (state.answers[state.currentQ] === null) {
         state.timeSpent[state.currentQ] = TIMER_SECONDS;
-        saveProgress();
       }
-      if (state.currentQ >= QUESTIONS.length - 1) {
-        submitQuiz();
-      } else {
-        state.currentQ++;
-        renderQuestion();
-      }
+      lockAndShowStats();
     }
   }, 1000);
 }
 
-function updateTimerUI(val) {
-  document.getElementById('timer-number').textContent = val;
-  const offset = TIMER_CIRC - (val / TIMER_SECONDS) * TIMER_CIRC;
-  document.getElementById('timer-ring').style.strokeDashoffset = offset;
+function lockAndShowStats() {
+  const q = QUESTIONS[state.currentQ];
+  const correctIdx = q.answer;
+  
+  // Show waiting text
+  document.getElementById('student-waiting-host').style.display = 'block';
+
+  // Highlight correct and wrong answers
+  document.querySelectorAll('.option-btn').forEach((btn, i) => {
+    btn.disabled = true; // lock options
+    btn.style.opacity = '1';
+    if (i === correctIdx) {
+      btn.style.borderColor = '#10b981';
+      btn.style.background = 'rgba(16,185,129,0.1)';
+      btn.insertAdjacentHTML('beforeend', '<span style="color:#10b981;float:right;font-weight:bold">✅ Correct</span>');
+    } else if (state.answers[state.currentQ] === i) {
+      btn.style.borderColor = '#ef4444';
+      btn.style.background = 'rgba(239,68,68,0.1)';
+      btn.insertAdjacentHTML('beforeend', '<span style="color:#ef4444;float:right;font-weight:bold">❌ Incorrect</span>');
+    } else {
+      btn.style.opacity = '0.3';
+    }
+  });
+
+  saveProgress();
 }
 
 // ── Progress persistence ───────────────────────────────────
@@ -586,21 +690,26 @@ function renderLeaderboard(rows) {
 }
 
 function renderPodium(top) {
-  const medals = ['🥇','🥈','🥉'];
-  // Reorder for visual podium: 2nd | 1st | 3rd
-  const order = [top[1], top[0], top[2]].filter(Boolean);
-  const orderIdx = [1, 0, 2];
-
   const wrap = document.getElementById('podium-wrap');
-  if (!top[0]) { wrap.innerHTML = ''; return; }
+  if (!top || !top[0]) { wrap.innerHTML = ''; return; }
 
-  wrap.innerHTML = order.map((r, i) => {
-    const origIdx = orderIdx[i];
+  // We want visual order: 2nd, 1st, 3rd.
+  const podiumData = [
+    { rank: 2, data: top[1] },
+    { rank: 1, data: top[0] },
+    { rank: 3, data: top[2] }
+  ].filter(item => item.data);
+
+  const medals = { 1: '🥇', 2: '🥈', 3: '🥉' };
+
+  wrap.innerHTML = podiumData.map(item => {
+    const r = item.data;
+    const rank = item.rank;
     return `<div class="podium-item">
-      <div class="podium-avatar">${r.name.charAt(0)}</div>
+      <div class="podium-avatar podium-rank-${rank}">${r.name.charAt(0)}</div>
       <div class="podium-name">${escHtml(r.name)}</div>
       <div class="podium-score">${r.score}/${r.totalQuestions || QUESTIONS.length}</div>
-      <div class="podium-block"><span class="podium-medal">${medals[origIdx]}</span></div>
+      <div class="podium-block block-rank-${rank}"><span class="podium-medal">${medals[rank]}</span></div>
     </div>`;
   }).join('');
 }
@@ -621,11 +730,22 @@ function closeModal() {
 }
 
 // ── Toast ──────────────────────────────────────────────────
+let toastTimeout = null;
 function showToast(msg, duration = 4000) {
   const t = document.getElementById('toast');
   t.textContent = msg;
+  
+  // Replay CSS animation
+  t.style.animation = 'none';
+  void t.offsetWidth; // trigger reflow
+  t.style.animation = null;
+  
   t.classList.remove('hidden');
-  setTimeout(() => t.classList.add('hidden'), duration);
+  
+  if (toastTimeout) clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => {
+    t.classList.add('hidden');
+  }, duration);
 }
 
 // ── Helpers ────────────────────────────────────────────────

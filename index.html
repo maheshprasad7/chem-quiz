@@ -78,10 +78,10 @@
           <div class="options-grid" id="options-grid"></div>
         </div>
         <div class="quiz-footer">
-          <div class="answered-info" id="answered-info"></div>
-          <button class="btn btn-primary btn-next" id="next-btn" onclick="handleNext()" disabled>
-            <span id="next-btn-label">Select an answer</span><span>→</span>
-          </button>
+          <div class="answered-info" id="answered-info">Waiting for host...</div>
+          <div id="student-waiting-host" style="display:none; color:var(--gold); font-weight:600; animation:pulse 1.5s infinite">
+            Wait for host to proceed...
+          </div>
         </div>
       </main>
     </div>
@@ -133,6 +133,38 @@
           🏆 View Live Leaderboard
         </button>
       </div>
+    </div>
+  </section>
+
+  <!-- ===================== ADMIN LIVE VIEW ===================== -->
+  <section id="view-admin-live" class="view">
+    <div class="quiz-layout">
+      <header class="quiz-header">
+        <div class="quiz-meta">
+          <span class="college-badge" style="background:rgba(239,68,68,0.15);color:#fca5a5;border-color:rgba(239,68,68,0.3)">👑 Host View</span>
+          <span class="question-badge" id="admin-q-badge">Question 1</span>
+        </div>
+      </header>
+      <main class="question-area">
+        <div class="question-card glass-card">
+          <h2 class="question-text" id="admin-q-text">Loading question...</h2>
+          
+          <div style="display:flex; justify-content:space-between; margin-top:2rem; margin-bottom:1rem">
+            <h3 style="color:var(--text-muted)">Answers: <span id="admin-answered-count" style="color:#fff;font-size:1.5rem;font-weight:800">0</span> / <span id="admin-total-count">0</span></h3>
+            <h3 style="color:var(--gold)">Time Left: <span id="admin-timer" style="color:#fff;font-size:1.5rem;font-weight:800">10</span>s</h3>
+          </div>
+
+          <div class="options-grid" id="admin-options-grid">
+            <!-- admin stats go here -->
+          </div>
+
+          <div style="margin-top:2.5rem">
+            <button class="btn btn-primary" style="width:100%;font-size:1.1rem;padding:1rem" id="admin-next-btn" onclick="adminNextQuestion()" disabled>
+              Wait for Timer...
+            </button>
+          </div>
+        </div>
+      </main>
     </div>
   </section>
 
